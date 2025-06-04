@@ -2,8 +2,6 @@
 
 A modern, responsive status page for monitoring your services using UptimeRobot API. This dashboard provides real-time status information about your monitored services with a beautiful UI.
 
-![Dashboard Preview](https://i.imgur.com/example.png)
-
 ## Features
 
 - 🎨 Modern and responsive design using Tailwind CSS
@@ -25,7 +23,7 @@ A modern, responsive status page for monitoring your services using UptimeRobot 
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/uptime-status.git
+git clone https://github.com/huseyinatilgan/uptime-status.git
 cd uptime-status
 ```
 
@@ -45,7 +43,7 @@ php artisan key:generate
 ```
 
 5. Configure your UptimeRobot API key in `.env` file:
-```bash
+```env
 UPTIMEROBOT_API_KEY=your_api_key_here
 ```
 
@@ -68,16 +66,27 @@ Visit `http://localhost:8000` to see your status page.
 The dashboard can be configured through the `.env` file:
 
 ```env
-UPTIMEROBOT_API_KEY=your_api_key_here
-APP_NAME="Your Status Page"
+APP_NAME="Uptime Status"
+APP_ENV=local
+APP_DEBUG=true
 APP_URL=http://localhost:8000
+
+# UptimeRobot API Configuration
+UPTIMEROBOT_API_KEY=your_api_key_here
 ```
+
+### Customization
+
+- Customize the view by editing `resources/views/status.blade.php`
+- Modify API integration in `app/Http/Controllers/StatusController.php`
+- Adjust styles in `public/css/app.css`
 
 ## Security
 
 - Never commit your `.env` file to version control
 - Keep your UptimeRobot API key secure
 - Use environment variables for sensitive data
+- Set `APP_DEBUG=false` in production
 
 ## Contributing
 
@@ -103,8 +112,9 @@ If you have any questions or need help, please open an issue in the GitHub repos
 
 ## Author
 
-Your Name - [@yourusername](https://github.com/yourusername)
+Hüseyin Atılgan
+- GitHub: [@huseyinatilgan](https://github.com/huseyinatilgan)
 
 ---
 
-Made with ❤️ by [Your Name]
+Made with ❤️ by [Hüseyin Atılgan]
