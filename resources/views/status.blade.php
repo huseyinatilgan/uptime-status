@@ -1,165 +1,145 @@
+@php
+    $allOperational = true;
+    $hasDown = false;
+    $hasWarning = false;
+    $totalMonitors = isset($monitors) ? count($monitors) : 0;
+    $downCount = 0;
+    $warningCount = 0;
+    if(isset($monitors)) {
+        foreach($monitors as $monitor) {
+            if($monitor['status'] === 'down') {
+                $allOperational = false;
+                $hasDown = true;
+                $downCount++;
+            } elseif($monitor['status'] === 'seems_down') {
+                $allOperational = false;
+                $hasWarning = true;
+                $warningCount++;
+            }
+        }
+    }
+@endphp
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="tr">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ config('app.name', 'Uptime Status') }}</title>
+    <title>{{ config('app.name', 'Durum Paneli') }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        .status-indicator {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 8px;
-        }
-        .status-up { background-color: #10B981; }
-        .status-down { background-color: #EF4444; }
-        .status-warning { background-color: #F59E0B; }
-        .status-unknown { background-color: #6B7280; }
-        
-        .service-row {
-            transition: all 0.3s ease;
-            border-bottom: 1px solid #e5e7eb;
-        }
-        
-        .service-row:hover {
-            background-color: #f9fafb;
-        }
-
-        .response-time {
-            font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
-        }
-    </style>
 </head>
-<body class="bg-gray-50">
-    <div class="min-h-screen">
-        <!-- Header -->
-        <header class="bg-white shadow-sm">
-            <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center">
-                    <h1 class="text-2xl font-semibold text-gray-900">
-                        {{ config('app.name', 'Uptime Status') }}
-                    </h1>
-                    <div class="text-sm text-gray-500">
-                        Son güncelleme: {{ now()->format('d.m.Y H:i:s') }}
+<body class="bg-gray-100 min-h-screen">
+    <header class="bg-gray-900 text-white py-6 shadow">
+        <div class="max-w-5xl mx-auto flex flex-col md:flex-row md:justify-between md:items-center px-4">
+            <div class="flex items-center">
+                <img src="/logo.png" alt="Logo" class="h-16 w-auto mr-3" onerror="this.style.display='none'">
+                <span class="text-2xl font-bold" style="display:none;" id="fallback-title">{{ config('app.name', 'Durum Paneli') }}</span>
+            </div>
+            <div class="mt-2 md:mt-0 text-right">
+                <div class="font-semibold text-lg">Servis durumu</div>
+                <div class="text-sm text-gray-300">Son güncelleme {{ now()->format('H:i:s') }} | Bir sonraki güncelleme <span id="counter">60</span> sn.</div>
+            </div>
+        </div>
+    </header>
+    <main class="max-w-5xl mx-auto px-4 mt-8">
+        <div class="rounded-xl shadow-lg p-8 mb-8 flex items-center justify-between {{ $allOperational ? 'bg-green-50' : 'bg-yellow-50' }}">
+            <div class="flex items-center">
+                <span class="inline-block w-12 h-12 rounded-full mr-6 {{ $allOperational ? 'bg-green-400' : 'bg-yellow-400' }}"></span>
+                <div>
+                    <h2 class="text-2xl font-bold {{ $allOperational ? 'text-green-700' : 'text-yellow-700' }}">
+                        @if($allOperational)
+                            Tüm sistemler çalışıyor
+                        @else
+                            Bazı sistemlerde sorun var
+                        @endif
+                    </h2>
+                    <div class="text-gray-500 mt-1">
+                        @if($allOperational)
+                            Tüm servisler sorunsuz çalışıyor.
+                        @else
+                            {{ $downCount > 0 ? $downCount.' servis çalışmıyor.' : '' }}
+                            {{ $warningCount > 0 ? $warningCount.' serviste sorun olabilir.' : '' }}
+                        @endif
                     </div>
                 </div>
             </div>
-        </header>
-
-        <!-- Main Content -->
-        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-            @if(isset($error))
-                <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-4">
-                    <div class="flex">
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-exclamation-circle text-red-400"></i>
-                        </div>
-                        <div class="ml-3">
-                            <p class="text-sm text-red-700">{{ $error }}</p>
-                        </div>
-                    </div>
-                </div>
-            @endif
-
-            @if(empty($monitors))
-                <div class="text-center py-12">
-                    <i class="fas fa-info-circle text-gray-400 text-4xl mb-4"></i>
-                    <p class="text-gray-500">Henüz izlenen sistem bulunmuyor</p>
-                </div>
-            @else
-                <!-- Service List -->
-                <div class="bg-white shadow-sm rounded-lg overflow-hidden">
-                    <div class="divide-y divide-gray-200">
-                        @foreach($monitors as $monitor)
-                            <div class="service-row p-4 sm:p-6">
-                                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                                    <div class="flex items-center mb-3 sm:mb-0">
-                                        <span class="status-indicator status-{{ strtolower($monitor['status'] ?? 'unknown') }}"></span>
-                                        <div>
-                                            <h3 class="text-lg font-medium text-gray-900">
-                                                {{ $monitor['friendly_name'] ?? 'İsimsiz Servis' }}
-                                            </h3>
-                                            <p class="text-sm text-gray-500 mt-1">
-                                                {{ $monitor['url'] ?? 'URL belirtilmemiş' }}
-                                            </p>
-                                        </div>
+        </div>
+        <section>
+            <h2 class="text-xl font-semibold mb-4">Servisler</h2>
+            <div class="bg-white rounded-xl shadow divide-y">
+                @if(isset($monitors) && count($monitors) > 0)
+                    @foreach($monitors as $monitor)
+                        @php
+                            $statusColor = match($monitor['status']) {
+                                'up' => 'text-green-600',
+                                'down' => 'text-red-600',
+                                'seems_down' => 'text-yellow-600',
+                                'paused' => 'text-gray-400',
+                                default => 'text-gray-400',
+                            };
+                            $barColor = match($monitor['status']) {
+                                'up' => 'bg-green-400',
+                                'down' => 'bg-red-400',
+                                'seems_down' => 'bg-yellow-400',
+                                'paused' => 'bg-gray-300',
+                                default => 'bg-gray-300',
+                            };
+                            $uptime = $monitor['uptime'] ?? null;
+                        @endphp
+                        <div class="flex flex-col md:flex-row md:items-center md:justify-between p-6">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center mb-2">
+                                    <span class="inline-block w-3 h-3 rounded-full mr-2 {{ $barColor }}"></span>
+                                    <span class="font-semibold text-lg">{{ $monitor['friendly_name'] ?? 'İsimsiz Servis' }}</span>
+                                    <span class="ml-3 text-sm text-gray-400">{{ $monitor['url'] ?? '' }}</span>
+                                </div>
+                                <div class="flex items-center mt-1">
+                                    <div class="flex items-center text-sm mr-4">
+                                        <i class="fas fa-percentage mr-1"></i>
+                                        <span class="font-mono font-semibold {{ $statusColor }}">
+                                            {{ $uptime ? number_format($uptime, 3) : 'N/A' }}%
+                                        </span>
                                     </div>
-                                    
-                                    <div class="flex flex-col sm:items-end space-y-2">
-                                        <div class="flex items-center">
-                                            <span class="text-sm font-medium text-gray-900 mr-2">Durum:</span>
-                                            <span class="px-2.5 py-0.5 rounded-full text-xs font-medium
-                                                @if(isset($monitor['status']))
-                                                    @if($monitor['status'] == 'up')
-                                                        bg-green-100 text-green-800
-                                                    @elseif($monitor['status'] == 'down')
-                                                        bg-red-100 text-red-800
-                                                    @elseif($monitor['status'] == 'seems_down')
-                                                        bg-yellow-100 text-yellow-800
-                                                    @elseif($monitor['status'] == 'paused')
-                                                        bg-gray-100 text-gray-800
-                                                    @else
-                                                        bg-gray-100 text-gray-800
-                                                    @endif
-                                                @else
-                                                    bg-gray-100 text-gray-800
-                                                @endif">
-                                                @if(isset($monitor['status']))
-                                                    @if($monitor['status'] == 'up')
-                                                        <i class="fas fa-check-circle mr-1"></i> Çalışıyor
-                                                    @elseif($monitor['status'] == 'down')
-                                                        <i class="fas fa-times-circle mr-1"></i> Çalışmıyor
-                                                    @elseif($monitor['status'] == 'seems_down')
-                                                        <i class="fas fa-exclamation-circle mr-1"></i> Sorun Olabilir
-                                                    @elseif($monitor['status'] == 'paused')
-                                                        <i class="fas fa-pause-circle mr-1"></i> Duraklatıldı
-                                                    @else
-                                                        <i class="fas fa-question-circle mr-1"></i> Bilinmiyor
-                                                    @endif
-                                                @else
-                                                    <i class="fas fa-question-circle mr-1"></i> Bilinmiyor
-                                                @endif
-                                            </span>
-                                        </div>
-                                        
-                                        @if(isset($monitor['response_times']))
-                                            <div class="response-time text-sm text-gray-500">
-                                                Son yanıt: {{ $monitor['response_times'][0]['value'] ?? 'N/A' }} ms
-                                            </div>
+                                    <span class="ml-2 px-2 py-1 rounded-full text-xs font-bold {{
+                                        $monitor['status'] === 'up' ? 'bg-green-100 text-green-700' :
+                                        ($monitor['status'] === 'down' ? 'bg-red-100 text-red-700' :
+                                        ($monitor['status'] === 'seems_down' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'))
+                                    }}">
+                                        @if($monitor['status'] === 'up') Çalışıyor
+                                        @elseif($monitor['status'] === 'down') Çalışmıyor
+                                        @elseif($monitor['status'] === 'seems_down') Sorun olabilir
+                                        @elseif($monitor['status'] === 'paused') Duraklatıldı
+                                        @else Bilinmiyor
                                         @endif
-                                        
-                                        @if(isset($monitor['last_check']))
-                                            <div class="text-xs text-gray-400">
-                                                Son kontrol: {{ \Carbon\Carbon::createFromTimestamp($monitor['last_check'])->format('d.m.Y H:i:s') }}
-                                            </div>
-                                        @endif
-                                    </div>
+                                    </span>
                                 </div>
                             </div>
-                        @endforeach
-                    </div>
-                </div>
-            @endif
-        </main>
-
-        <!-- Footer -->
-        <footer class="bg-white border-t border-gray-200 mt-8">
-            <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-                <p class="text-center text-sm text-gray-500">
-                    Powered by <a href="https://uptimerobot.com" target="_blank" class="text-indigo-600 hover:text-indigo-500">UptimeRobot</a>
-                </p>
+                            <div class="mt-4 md:mt-0 md:ml-6 text-xs text-gray-400 text-right">
+                                @if(isset($monitor['last_check']))
+                                    Son kontrol: {{ \Carbon\Carbon::createFromTimestamp($monitor['last_check'])->format('d.m.Y H:i:s') }}
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
+                @else
+                    <div class="p-6 text-center text-gray-400">Henüz izlenen sistem bulunmuyor.</div>
+                @endif
             </div>
-        </footer>
-    </div>
-
+        </section>
+    </main>
+    <footer class="max-w-5xl mx-auto px-4 py-8 text-center text-gray-400 text-sm">
+        Powered by <a href="https://uptimerobot.com" target="_blank" class="text-indigo-600 hover:underline">UptimeRobot</a>
+    </footer>
     <script>
-        // Sayfayı her 60 saniyede bir yenile
-        setTimeout(function() {
-            window.location.reload();
-        }, 60000);
+        // Otomatik yenileme ve sayaç
+        let counter = 60;
+        setInterval(function() {
+            counter--;
+            document.getElementById('counter').innerText = counter;
+            if(counter <= 0) {
+                location.reload();
+            }
+        }, 1000);
     </script>
 </body>
 </html>
